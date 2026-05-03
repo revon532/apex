@@ -102,10 +102,9 @@ function Topbar({ active }) {
 }
 
 function MobileNav({ active, setActive }) {
-  const items = NAV.filter(n=>['dashboard','salary','atiu','trading','ai'].includes(n.id));
   return (
     <nav className="apex-mobile-nav">
-      {items.map(item=>(
+      {NAV.map(item=>(
         <button key={item.id} className={`apex-mobile-btn ${active===item.id?'active':''}`} onClick={()=>setActive(item.id)}>
           <span style={{fontSize:18}}>{item.icon}</span>
           <span>{item.label.split(' ')[0]}</span>

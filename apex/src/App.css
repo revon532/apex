@@ -78,14 +78,17 @@
   position:fixed; bottom:0; left:0; right:0; z-index:50;
   background:rgba(6,6,16,0.98); border-top:1px solid rgba(255,255,255,0.06);
   backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-  padding:8px 4px; justify-content:space-around;
+  padding:8px 4px;
+  display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
 }
+.apex-mobile-nav::-webkit-scrollbar { display:none; }
 .apex-mobile-btn {
   display:flex; flex-direction:column; align-items:center; gap:3px;
   padding:6px 10px; border-radius:10px; cursor:pointer;
   background:none; border:none; color:var(--c-sec);
-  font-size:9px; font-weight:600; min-width:48px; min-height:48px; justify-content:center;
-  transition:color 0.15s;
+  font-size:9px; font-weight:600; min-width:56px; min-height:48px; justify-content:center;
+  transition:color 0.15s; flex-shrink:0; scroll-snap-align:start;
 }
 .apex-mobile-btn.active { color:var(--c-gold); }
 
