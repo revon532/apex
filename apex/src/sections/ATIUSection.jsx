@@ -292,68 +292,116 @@ export default function ATIUSection() {
         </motion.div>
       )}
 
-      {/* C People scanner */}
       {tab==='audit' && (
         <motion.div variants={stagger(0.06)} initial="hidden" animate="show" className="stack gap-md">
           {auditData.length === 0 ? (
             <motion.div variants={fadeUp} className="card">
               <EmptyState icon="🔍" title="No payslips to audit"
-                sub="Import payslips in Salary Intelligence and log C People attendance data to enable payslip fraud detection."/>
+                sub="Import payslips in Salary Intelligence and log attendance in the Log tab to enable payslip vs hours comparison."/>
             </motion.div>
           ) : (
             <>
-              {/* Summary row */}
               <motion.div variants={fadeUp} className="grid-4">
                 {[
-                  {label:'Months Audited',    value:auditData.length,                                                                          color:'var(--c-text)',  accent:'var(--c-info)'},
-                  {label:'Critical Issues',   value:auditData.filter(a=>a.flags.some(f=>f.severity==='critical')).length,                      color:'var(--c-loss)',  accent:'var(--c-loss)'},
-                  {label:'Total Unpaid OT',   value:fmtEur(auditData.reduce((s,a)=>s+a.overtimePremium,0)),                                    color:'var(--c-gold)',  accent:'var(--c-gold)'},
-                  {label:'Months No Data',    value:auditData.filter(a=>!a.hasData).length,                                                    color:'var(--c-sec)',   accent:'var(--c-purple)'},
+                  {label:'Months Audited',  value:auditData.length, color:'var(--c-text)', accent:'var(--c-accent)'},
+                  {label:'Critical Issues', value:auditData.filter(a=>a.flags.some(f=>f.severity==='critical')).length, color:'var(--c-loss)', accent:'var(--c-loss)'},
+                  {label:'Unpaid Overtime', value:fmtEur(auditData.reduce((s,a)=>s+a.overtimePremium,0)), color:'var(--c-gold)', accent:'var(--c-gold)'},
+                  {label:'Months No Data',  value:auditData.filter(a=>!a.hasData).length, color:'var(--c-sec)', accent:'var(--c-purple)'},
                 ].map((s,i)=><StatBox key={s.label} {...s} delay={i*0.06}/>)}
               </motion.div>
 
-              {/* Per-month cards */}
-              {auditData.map(a=>(
-                <motion.div variants={fadeUp} key={a.month} className="card">
-                  <div className="flex-between" style={{marginBottom:12}}>
+              {auditData.map((a,idx)=>(
+                <motion.div variants={fadeUp} key={a.month} className="card" style={{borderColor: a.flags.some(f=>f.severity==='critical')?'rgba(255,82,82,0.25)':undefined}}>
+
+                  {/* Header */}
+                  <div className="flex-between" style={{marginBottom:16}}>
                     <div>
-                      <div style={{fontWeight:700,fontSize:15}}>{a.period}</div>
-                      <div style={{fontSize:11,color:'var(--c-sec)',marginTop:2}}>Payment date: {formatDate(a.payslip.date)}</div>
+                      <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:16}}>{a.period}</div>
+                      <div style={{fontSize:11,color:'var(--c-sec)',marginTop:2}}>Paid: {formatDate(a.payslip.date)}</div>
                     </div>
                     <div className="flex gap-sm">
-                      {a.flags.some(f=>f.severity==='critical') && <span className="badge badge-loss">⛔ Issues found</span>}
+                      {a.flags.some(f=>f.severity==='critical') && <span className="badge badge-loss">⛔ Issues</span>}
                       {!a.flags.some(f=>f.severity==='critical') && a.hasData && <span className="badge badge-win">✓ Clean</span>}
-                      {!a.hasData && <span className="badge badge-dim">No attendance data</span>}
+                      {!a.hasData && <span className="badge badge-dim">No clock data</span>}
                     </div>
                   </div>
 
-                  {a.hasData && (
-                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:8,marginBottom:14}}>
-                      {[
-                        {l:'Hours Logged',    v:`${a.totalHours.toFixed(1)}h`,                         c:a.totalHours>=155?'var(--c-text)':'var(--c-gold)'},
-                        {l:'Work Days',       v:a.workDays,                                             c:'var(--c-text)'},
-                        {l:'Overtime Hours',  v:`${a.overtimeHours.toFixed(1)}h`,                      c:a.overtimeHours>0?'var(--c-gold)':'var(--c-sec)'},
-                        {l:'Sick Days',       v:a.sickDays,                                             c:a.sickDays>3?'var(--c-loss)':'var(--c-sec)'},
-                        {l:'Payslip Gross',   v:a.payslip.gross>0?fmtEur(a.payslip.gross):'—',         c:'var(--c-text)'},
-                        {l:'Expected Gross',  v:a.expectedGross>0?fmtEur(a.expectedGross):'—',          c:a.overtimeHours>0?'var(--c-win)':'var(--c-sec)'},
-                      ].map(r=>(
-                        <div key={r.l} style={{background:'rgba(255,255,255,0.03)',borderRadius:8,padding:'8px 10px',border:'1px solid var(--c-bdr)'}}>
-                          <div style={{fontSize:10,color:'var(--c-sec)',marginBottom:3,textTransform:'uppercase',letterSpacing:0.8}}>{r.l}</div>
-                          <div style={{fontSize:13,fontWeight:700,color:r.c,fontFamily:'Space Grotesk,sans-serif'}}>{r.v}</div>
+                  {/* Side-by-side comparison */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+                    {/* Clock-in data column */}
+                    <div style={{background:'rgba(79,124,246,0.06)',border:'1px solid rgba(79,124,246,0.15)',borderRadius:12,padding:'12px 14px'}}>
+                      <div style={{fontSize:9,color:'var(--c-accent)',textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,marginBottom:10}}>⏱ Clock-in Records</div>
+                      {a.hasData ? (
+                        <div className="stack gap-sm">
+                          {[
+                            {l:'Hours Logged', v:`${a.totalHours.toFixed(1)}h`, c:a.totalHours>=155?'var(--c-text)':a.totalHours>0?'var(--c-gold)':'var(--c-sec)'},
+                            {l:'Days Worked',  v:a.workDays,                    c:'var(--c-text)'},
+                            {l:'Overtime',     v:`${a.overtimeHours.toFixed(1)}h`, c:a.overtimeHours>0?'var(--c-gold)':'var(--c-sec)'},
+                            {l:'Sick Days',    v:a.sickDays,                    c:a.sickDays>3?'var(--c-loss)':'var(--c-sec)'},
+                            {l:'Late (total)', v:`${a.totalLateMin}min`,        c:a.totalLateMin>60?'var(--c-loss)':'var(--c-sec)'},
+                          ].map(r=>(
+                            <div key={r.l} className="flex-between" style={{fontSize:12}}>
+                              <span style={{color:'var(--c-sec)'}}>{r.l}</span>
+                              <span style={{fontWeight:700,color:r.c,fontFamily:'var(--font-head)'}}>{r.v}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        <div style={{fontSize:12,color:'var(--c-dim)',textAlign:'center',padding:'12px 0'}}>No clock-in data for this month.<br/>Log hours in the Log tab.</div>
+                      )}
+                    </div>
+
+                    {/* Payslip data column */}
+                    <div style={{background:'rgba(6,214,160,0.05)',border:'1px solid rgba(6,214,160,0.15)',borderRadius:12,padding:'12px 14px'}}>
+                      <div style={{fontSize:9,color:'var(--c-win)',textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,marginBottom:10}}>📄 Payslip Data</div>
+                      <div className="stack gap-sm">
+                        {[
+                          {l:'Gross',    v:a.payslip.gross>0?fmtEur(a.payslip.gross):'—',       c:'var(--c-text)'},
+                          {l:'Net',      v:fmtEur(a.payslip.net),                                c:'var(--c-win)'},
+                          {l:'IRPEF',    v:a.payslip.incomeTax>0?fmtEur(a.payslip.incomeTax):'—', c:'var(--c-loss)'},
+                          {l:'INPS',     v:a.payslip.socialSec>0?fmtEur(a.payslip.socialSec):'—', c:'var(--c-purple)'},
+                          {l:'Employer', v:a.payslip.employer||'—',                              c:'var(--c-sec)'},
+                        ].map(r=>(
+                          <div key={r.l} className="flex-between" style={{fontSize:12}}>
+                            <span style={{color:'var(--c-sec)'}}>{r.l}</span>
+                            <span style={{fontWeight:700,color:r.c,fontFamily:'var(--font-head)',maxWidth:100,textOverflow:'ellipsis',overflow:'hidden',whiteSpace:'nowrap'}}>{r.v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expected vs actual gross */}
+                  {a.hasData && a.payslip.gross > 0 && (
+                    <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid var(--c-bdr)',borderRadius:10,padding:'10px 14px',marginBottom:12}}>
+                      <div style={{fontSize:9,color:'var(--c-sec)',textTransform:'uppercase',letterSpacing:1.5,marginBottom:8}}>Gross Comparison</div>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,textAlign:'center'}}>
+                        <div>
+                          <div style={{fontSize:10,color:'var(--c-sec)',marginBottom:3}}>Hours × Rate</div>
+                          <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:14,color:'var(--c-accent)'}}>{fmtEur(a.totalHours * a.hourlyRate)}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,color:'var(--c-sec)',marginBottom:3}}>+ OT Premium</div>
+                          <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:14,color:'var(--c-gold)'}}>{fmtEur(a.overtimePremium)}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,color:'var(--c-sec)',marginBottom:3}}>Payslip Gross</div>
+                          <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:14,color: Math.abs((a.totalHours*a.hourlyRate+a.overtimePremium)-a.payslip.gross)>50?'var(--c-loss)':'var(--c-win)'}}>{fmtEur(a.payslip.gross)}</div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {/* Flags */}
+                  <div className="stack gap-sm">
                     {a.flags.map((f,i)=>(
                       <div key={i} style={{
-                        display:'flex',gap:8,padding:'8px 12px',borderRadius:8,fontSize:12,
-                        background:f.severity==='critical'?'var(--c-loss-dim)':f.severity==='warn'?'rgba(240,139,58,0.08)':f.severity==='ok'?'var(--c-win-dim)':'rgba(74,144,226,0.08)',
-                        border:`1px solid ${f.severity==='critical'?'rgba(255,71,87,0.25)':f.severity==='warn'?'rgba(240,139,58,0.2)':f.severity==='ok'?'rgba(0,212,160,0.2)':'rgba(74,144,226,0.2)'}`,
-                        color:f.severity==='critical'?'var(--c-loss)':f.severity==='warn'?'var(--c-gold)':f.severity==='ok'?'var(--c-win)':'var(--c-info)',
+                        display:'flex',alignItems:'flex-start',gap:8,padding:'9px 12px',borderRadius:9,fontSize:12,lineHeight:1.6,
+                        background:f.severity==='critical'?'var(--c-loss-dim)':f.severity==='warn'?'rgba(240,180,41,0.08)':f.severity==='ok'?'var(--c-win-dim)':'var(--c-accent-dim)',
+                        border:`1px solid ${f.severity==='critical'?'rgba(255,82,82,0.25)':f.severity==='warn'?'rgba(240,180,41,0.22)':f.severity==='ok'?'rgba(6,214,160,0.22)':'rgba(79,124,246,0.2)'}`,
+                        color:f.severity==='critical'?'var(--c-loss)':f.severity==='warn'?'var(--c-gold)':f.severity==='ok'?'var(--c-win)':'var(--c-accent)',
                       }}>
-                        <span style={{flexShrink:0}}>{f.severity==='critical'?'⛔':f.severity==='warn'?'⚠':f.severity==='ok'?'✓':'ℹ'}</span>
+                        <span style={{flexShrink:0,fontSize:14}}>{f.severity==='critical'?'⛔':f.severity==='warn'?'⚠️':f.severity==='ok'?'✅':'ℹ️'}</span>
                         <span>{f.msg}</span>
                       </div>
                     ))}
