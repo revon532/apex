@@ -215,28 +215,47 @@ export default function SalaryIntelligence() {
       </div>
 
       {/* Payslip history */}
-      {salary.history.length>0 && (
+      {salary.history.length > 0 && (
         <Card>
-          <div className="sec-lbl" style={{marginBottom:16}}>Payslip History</div>
-          <div className="scrollable" style={{maxHeight:280}}>
-            <table className="apex-table">
-              <thead><tr><th>Period</th><th>Employer</th><th>Net</th><th>Gross</th><th>IRPEF</th><th>INPS</th><th>Deductions</th><th>Imported</th><th></th></tr></thead>
-              <tbody>
-                {salary.history.map(h=>(
-                  <tr key={h.id}>
-                    <td><div style={{fontWeight:600}}>{h.period||'—'}</div><div style={{fontSize:10,color:'var(--c-sec)'}}>{formatDate(h.date)}</div></td>
-                    <td style={{color:'var(--c-sec)',fontSize:12}}>{h.employer||'—'}</td>
-                    <td style={{fontWeight:700,color:'var(--c-win)',fontFamily:'Space Grotesk,sans-serif'}}>{fmtEur(h.net)}</td>
-                    <td style={{color:'var(--c-sec)'}}>{h.gross>0?fmtEur(h.gross):'—'}</td>
-                    <td style={{color:'var(--c-loss)'}}>{h.incomeTax>0?fmtEur(h.incomeTax):'—'}</td>
-                    <td style={{color:'var(--c-purple)'}}>{h.socialSec>0?fmtEur(h.socialSec):'—'}</td>
-                    <td style={{color:'var(--c-sec)'}}>{h.deductions>0?fmtEur(h.deductions):'—'}</td>
-                    <td style={{fontSize:11,color:'var(--c-sec)'}}>{formatDate(h.importedAt)}</td>
-                    <td><button onClick={()=>removePayslip(h.id)} className="btn btn-danger btn-sm">Remove</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex-between" style={{marginBottom:16}}>
+            <div className="sec-lbl" style={{marginBottom:0}}>Payslip History</div>
+            <span className="badge badge-dim">{salary.history.length} imported</span>
+          </div>
+          <div className="record-list">
+            {salary.history.map((h, i) => (
+              <motion.div
+                key={h.id}
+                initial={{opacity:0, y:10}}
+                animate={{opacity:1, y:0}}
+                transition={{delay: i * 0.04, duration:0.3}}
+                className="record-card"
+              >
+                <div className="record-card-top">
+                  <div>
+                    <div className="record-card-title">{h.period || '—'}</div>
+                    <div className="record-card-date">{h.employer || '—'} · {formatDate(h.date)}</div>
+                  </div>
+                  <div style={{textAlign:'right',display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                    <div className="record-card-net">{fmtEur(h.net)}</div>
+                    <button onClick={()=>removePayslip(h.id)} className="btn btn-danger btn-sm">Remove</button>
+                  </div>
+                </div>
+                <div className="record-card-grid">
+                  <div className="record-card-item">
+                    <div className="record-card-item-lbl">Gross</div>
+                    <div className="record-card-item-val" style={{color:'var(--c-sec)'}}>{h.gross>0?fmtEur(h.gross):'—'}</div>
+                  </div>
+                  <div className="record-card-item">
+                    <div className="record-card-item-lbl">IRPEF</div>
+                    <div className="record-card-item-val" style={{color:'var(--c-loss)'}}>{h.incomeTax>0?fmtEur(h.incomeTax):'—'}</div>
+                  </div>
+                  <div className="record-card-item">
+                    <div className="record-card-item-lbl">INPS</div>
+                    <div className="record-card-item-val" style={{color:'var(--c-purple)'}}>{h.socialSec>0?fmtEur(h.socialSec):'—'}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </Card>
       )}
