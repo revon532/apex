@@ -15,9 +15,15 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-  registerType: 'autoUpdate',
-  manifest: false
-}),
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
+        manifest: false,
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          cleanupOutdatedCaches: true,
+        },
+      }),
       {
         name: 'anthropic-proxy',
         configureServer(server) {
