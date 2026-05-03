@@ -195,31 +195,41 @@ export default function ATIUSection() {
             </div>
           </div>
 
-          {/* Month selector + table */}
+          {/* Month selector + cards */}
           <div className="card">
             <div className="flex-between" style={{marginBottom:16}}>
               <div className="sec-lbl" style={{marginBottom:0}}>Attendance Log</div>
-              <input className="input" type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)} style={{width:160}}/>
+              <input className="input" type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)} style={{width:150}}/>
             </div>
             {currentMonthEntries.length > 0 ? (
-              <div className="scrollable" style={{maxHeight:300}}>
-                <table className="apex-table">
-                  <thead><tr><th>Date</th><th>Type</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Late</th><th>Notes</th><th></th></tr></thead>
-                  <tbody>
-                    {[...currentMonthEntries].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>(
-                      <tr key={e.id}>
-                        <td style={{fontWeight:600}}>{formatDate(e.date)}</td>
-                        <td><span className={`badge badge-${e.type==='work'?'info':e.type==='sick'?'loss':'gold'}`}>{e.type}</span></td>
-                        <td style={{color:'var(--c-sec)',fontFamily:'Space Grotesk,sans-serif'}}>{e.clockIn||'—'}</td>
-                        <td style={{color:'var(--c-sec)',fontFamily:'Space Grotesk,sans-serif'}}>{e.clockOut||'—'}</td>
-                        <td style={{fontWeight:700,color:'var(--c-info)',fontFamily:'Space Grotesk,sans-serif'}}>{e.hoursWorked>0?`${e.hoursWorked}h`:'—'}</td>
-                        <td style={{color:e.lateMinutes>0?'var(--c-loss)':'var(--c-sec)'}}>{e.lateMinutes>0?`${e.lateMinutes}m late`:'—'}</td>
-                        <td style={{fontSize:11,color:'var(--c-sec)',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.notes||'—'}</td>
-                        <td><button onClick={()=>removeWorkEntry(e.id)} style={{background:'none',border:'none',color:'var(--c-dim)',cursor:'pointer',fontSize:17}}>×</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="record-list">
+                {[...currentMonthEntries].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>(
+                  <div key={e.id} className="record-card">
+                    <div className="record-card-top">
+                      <div>
+                        <div className="record-card-title">{formatDate(e.date)}</div>
+                        <div className="record-card-date" style={{display:'flex',gap:6,alignItems:'center',marginTop:3}}>
+                          <span className={`badge badge-${e.type==='work'?'accent':e.type==='sick'?'loss':'gold'}`}>{e.type}</span>
+                          {e.lateMinutes>0 && <span className="badge badge-loss">{e.lateMinutes}m late</span>}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{textAlign:'right'}}>
+                          <div style={{fontFamily:'var(--font-head)',fontSize:15,fontWeight:800,color:'var(--c-info)'}}>{e.hoursWorked>0?`${e.hoursWorked}h`:'—'}</div>
+                          {e.hoursWorked>8 && <div style={{fontSize:10,color:'var(--c-gold)'}}>+{(e.hoursWorked-8).toFixed(1)}h OT</div>}
+                        </div>
+                        <button onClick={()=>removeWorkEntry(e.id)} style={{background:'none',border:'none',color:'var(--c-dim)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 4px'}}>×</button>
+                      </div>
+                    </div>
+                    {(e.clockIn||e.clockOut||e.notes) && (
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+                        {e.clockIn  && <span style={{fontSize:11,color:'var(--c-sec)',background:'rgba(255,255,255,0.04)',padding:'3px 8px',borderRadius:6}}>In: <strong style={{color:'var(--c-text)'}}>{e.clockIn}</strong></span>}
+                        {e.clockOut && <span style={{fontSize:11,color:'var(--c-sec)',background:'rgba(255,255,255,0.04)',padding:'3px 8px',borderRadius:6}}>Out: <strong style={{color:'var(--c-text)'}}>{e.clockOut}</strong></span>}
+                        {e.notes    && <span style={{fontSize:11,color:'var(--c-sec)',fontStyle:'italic'}}>{e.notes}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : <EmptyState icon="📅" title="No entries this month"/>}
           </div>
@@ -312,7 +322,7 @@ export default function ATIUSection() {
                     </div>
                     <div className="flex gap-sm">
                       {a.flags.some(f=>f.severity==='critical') && <span className="badge badge-loss">⛔ Issues found</span>}
-                      {!a.flags.some(f=>f.severity==='critical') && a.hasData && <span className="badge badge-ok">✓ Clean</span>}
+                      {!a.flags.some(f=>f.severity==='critical') && a.hasData && <span className="badge badge-win">✓ Clean</span>}
                       {!a.hasData && <span className="badge badge-dim">No attendance data</span>}
                     </div>
                   </div>
