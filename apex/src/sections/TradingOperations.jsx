@@ -7,6 +7,37 @@ import { fmtEur, fmtUsd, fmtPct, calcTradeStats, parseCSV, uid, formatDate, toda
 
 const PAIRS = ['XAUUSD','EURUSD','GBPUSD','USDJPY','XAGUSD','BTCUSD','NAS100','US30'];
 
+async function extractTradesWithAI(text) {
+  const preview = text.slice(0, 8000);
+  const res = await fetch('/anthropic/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: `This is an MT5/FxPro trading history export (CSV or HTML). Extract all closed trades.
+Return ONLY a valid JSON array (no markdown, no explanation):
+[{"date":"YYYY-MM-DD","pair":"XAUUSD","direction":"BUY","entry":2380.00,"exit":2395.00,"lots":0.10,"fees":2.50,"pnl":150.00,"note":""}]
+- direction: "BUY" or "SELL" only
+- pair: use the symbol/instrument column as-is
+- pnl: net profit/loss in account currency (negative for losses)
+- fees/commission: positive number
+- If a field is missing, use 0 or ""
+- Include ALL rows that look like closed trades
+CSV content:
+${preview}`
+      }]
+    })
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const data = await res.json();
+  const txt = data.content?.map(b => b.text || '').join('') || '[]';
+  const parsed = JSON.parse(txt.replace(/```json|```/g, '').trim());
+  return parsed.filter(t => t.entry > 0 || t.pnl !== 0);
+}
+
 export default function TradingOperations() {
   const { state, addTrade, addTradesBulk, removeTrade, addDeposit, removeDeposit, addWithdrawal, removeWithdrawal } = useApp();
   const { trades, deposits, withdrawals } = state;
@@ -59,18 +90,43 @@ export default function TradingOperations() {
   async function handleCSV(file) {
     setImporting(true); setImportMsg(null);
     try {
-      const text=await file.text(), rows=parseCSV(text);
-      const mapped=rows.map(r=>{
-        const entry=parseFloat(r.entry||r['open price']||r['price open']||r.open||0);
-        const exit =parseFloat(r.exit||r['close price']||r['price close']||r.close||0);
-        const lots =parseFloat(r.lots||r.volume||r.quantity||r.size||0.01);
-        const pnl  =parseFloat(r.pnl||r.profit||r['net p&l']||r['p/l']||r.pl||0)||parseFloat(((exit-entry)*(r.direction?.toUpperCase()==='SELL'?-1:1)*lots*100).toFixed(2));
+      const text = await file.text();
+
+      // 1 — try local column mapping first
+      const rows = parseCSV(text);
+      let mapped = rows.map(r => {
+        const entry = parseFloat(r.entry||r['open price']||r['price open']||r.open||0);
+        const exit  = parseFloat(r.exit||r['close price']||r['price close']||r.close||0);
+        const lots  = parseFloat(r.lots||r.volume||r.quantity||r.size||0.01);
+        const pnl   = parseFloat(r.pnl||r.profit||r['net p&l']||r['p/l']||r.pl||0)||parseFloat(((exit-entry)*(r.direction?.toUpperCase()==='SELL'?-1:1)*lots*100).toFixed(2));
         return {id:uid(),date:r.date||r['open time']?.slice(0,10)||today(),pair:r.pair||r.symbol||r.instrument||'XAUUSD',direction:(r.direction||r.type||'BUY').toUpperCase(),entry,exit,lots,fees:parseFloat(r.fees||r.commission||0)||0,pnl:isNaN(pnl)?0:pnl,note:r.note||r.comment||'',source:'csv'};
-      }).filter(t=>t.entry>0);
-      if(!mapped.length) throw new Error('No valid trades found. Check CSV format.');
+      }).filter(t => t.entry > 0);
+
+      // 2 — if local parse found nothing, fall back to AI extraction
+      if (!mapped.length) {
+        setImportMsg({ok:true, msg:'⏳ Local parse found no trades — trying AI extraction…'});
+        const aiTrades = await extractTradesWithAI(text);
+        if (!aiTrades.length) throw new Error('No valid trades found. Ensure this is an MT5 closed-positions export.');
+        mapped = aiTrades.map(t => ({
+          id: uid(),
+          date: t.date || today(),
+          pair: t.pair || 'XAUUSD',
+          direction: (t.direction || 'BUY').toUpperCase(),
+          entry: parseFloat(t.entry) || 0,
+          exit:  parseFloat(t.exit)  || 0,
+          lots:  parseFloat(t.lots)  || 0.01,
+          fees:  parseFloat(t.fees)  || 0,
+          pnl:   parseFloat(t.pnl)   || 0,
+          note:  t.note || '',
+          source: 'ai-csv',
+        }));
+      }
+
       addTradesBulk(mapped);
-      setImportMsg({ok:true,msg:`✓ Imported ${mapped.length} trades from ${file.name}`});
-    } catch(e) { setImportMsg({ok:false,msg:e.message}); }
+      setImportMsg({ok:true, msg:`✓ Imported ${mapped.length} trades from ${file.name}`});
+    } catch(e) {
+      setImportMsg({ok:false, msg:e.message});
+    }
     setImporting(false);
   }
 
@@ -311,7 +367,7 @@ export default function TradingOperations() {
                 </label>
               </>
             )}
-            {importMsg && <div className={`alert alert-${importMsg.ok?'ok':'err'}`} style={{marginTop:14}}>{importMsg.msg}</div>}
+            {importMsg && <div className={`alert alert-${importMsg.ok?'info':'err'}`} style={{marginTop:14}}>{importMsg.msg}</div>}
           </Card>
           <Card>
             <div className="sec-lbl" style={{marginBottom:14}}>MT5 Live Sync — Architecture (Coming Soon)</div>
