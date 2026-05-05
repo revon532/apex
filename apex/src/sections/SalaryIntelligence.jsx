@@ -24,6 +24,10 @@ All numbers in EUR. 0 if not found. Empty string if text not found.`}
       ]}]
     })
   });
+  if (!res.ok) {
+    const errBody = await res.text().catch(()=>'');
+    throw new Error(`API error ${res.status}${res.status===401?' — invalid or missing API key':res.status===413?' — file too large, try a smaller image':''}: ${errBody.slice(0,120)}`);
+  }
   const data = await res.json();
   const txt = data.content?.map(b=>b.text||'').join('')||'{}';
   return JSON.parse(txt.replace(/```json|```/g,'').trim());

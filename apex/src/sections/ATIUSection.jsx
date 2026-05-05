@@ -27,6 +27,10 @@ Return ONLY valid JSON array (no markdown):
       ]}]
     })
   });
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(()=>'');
+    throw new Error(`API error ${resp.status}${resp.status===401?' — invalid or missing API key':resp.status===413?' — screenshot too large, try a cropped image':''}: ${errBody.slice(0,120)}`);
+  }
   const data = await resp.json();
   const txt = data.content?.map(b=>b.text||'').join('')||'[]';
   return JSON.parse(txt.replace(/```json|```/g,'').trim());
